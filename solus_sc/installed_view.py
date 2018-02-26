@@ -39,6 +39,8 @@ class ScInstalledView(ScPackagesView):
 
         self.load_page.set_message(_("Solving the Paradox Of Choice"))
 
+        self.set_tview_option("display-installed", False)
+
         self.stack.set_visible_child_name("loading")
 
     def init_view(self):

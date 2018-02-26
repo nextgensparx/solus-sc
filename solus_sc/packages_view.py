@@ -94,6 +94,15 @@ class ScPackagesView(Gtk.VBox):
         self.tview.set_property("headers-visible", False)
         self.scroll.add(self.tview)
 
+        # Installed
+        ren = Gtk.CellRendererPixbuf()
+        ren.set_padding(5, 5)
+        ren.set_property("icon-name", "object-select-symbolic")
+        column = Gtk.TreeViewColumn("Installed", ren, visible=4)
+        # set to true by 'display-installed 'tview option
+        column.set_visible(False)
+        self.tview.append_column(column)
+
         # img view
         ren = Gtk.CellRendererPixbuf()
         ren.set_property("stock-size", Gtk.IconSize.DIALOG)
@@ -115,6 +124,21 @@ class ScPackagesView(Gtk.VBox):
         self.tview.append_column(column)
         ren.set_property("xalign", 1.0)
 
+        self.tview_options = {}
+        # Must be called after creating columns
+        self.set_tview_option("display-installed", True)
+
+    def get_tview_option(self, key):
+        return self.tview_options[key]
+
+    def refresh_tview(self):
+        if self.get_tview_option("display-installed"):
+            self.tview.get_column(0).set_visible(True)
+
+    def set_tview_option(self, key, val):
+        self.tview_options[key] = val
+        self.refresh_tview()
+
     @staticmethod
     def get_pkg_name_from_path(tview, path):
         model = tview.get_model()
@@ -124,7 +148,8 @@ class ScPackagesView(Gtk.VBox):
 
     @staticmethod
     def get_model():
-        return Gtk.ListStore(str, str, GdkPixbuf.Pixbuf, str)
+        # name and description, name, icon, details (icon), install state
+        return Gtk.ListStore(str, str, GdkPixbuf.Pixbuf, str, bool)
 
     def get_pkg_model(self, pkg):
         summary = self.appsystem.get_summary(pkg)
@@ -139,7 +164,11 @@ class ScPackagesView(Gtk.VBox):
 
         pbuf = self.appsystem.get_pixbuf_only(pkg)
 
-        return [p_print, pkg.name, pbuf, "go-next-symbolic"]
+        installed = False
+        if self.get_tview_option("display-installed") and self.basket.installdb.has_package(pkg.name):
+            installed = True
+
+        return [p_print, pkg.name, pbuf, "go-next-symbolic", installed]
 
     def reset(self):
         self.tview.set_model(None)
