@@ -12,7 +12,7 @@
 #
 
 from gi.repository import Gtk, GObject
-from xng.plugins.base import PopulationFilter, ProviderItem
+from xng.plugins.base import PopulationFilter, ProviderItem, ProviderCategory
 from .featured import ScFeatured
 
 
@@ -27,26 +27,7 @@ class ScTileButton(Gtk.Button):
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
         self.add(box)
 
-        # Just replace the icon on the fly with something that
-        # fits better into the current theme
-        icon_theme = self.get_settings().get_property("gtk-icon-theme-name")
-        icon_theme = icon_theme.lower().replace("-", "")
-        # Sneaky, I know.
-        if icon_theme == "arcicons" or icon_theme == "arc":
-            devIcon = "text-x-changelog"
-        else:
-            devIcon = "gnome-dev-computer"
-
-        replacements = {
-            "text-editor": "x-office-calendar",
-            "redhat-programming": devIcon,
-            "security-high": "preferences-system-privacy",
-            "network": "preferences-system-network",
-        }
-
         icon = self.category.get_icon_name()
-        if icon in replacements:
-            icon = replacements[icon]
 
         img = Gtk.Image.new_from_icon_name(
             icon,
@@ -115,7 +96,9 @@ class ScHomeView(Gtk.Box):
 
     __gsignals__ = {
         'item-selected': (GObject.SIGNAL_RUN_LAST, GObject.TYPE_NONE,
-                          (ProviderItem,))
+                          (ProviderItem,)),
+        'category-selected': (GObject.SIGNAL_RUN_LAST, GObject.TYPE_NONE,
+                              (ProviderCategory,))
     }
 
     def get_page_name(self):
@@ -169,16 +152,20 @@ class ScHomeView(Gtk.Box):
         # self.set_border_width(40)
         self.show_all()
 
-    def emit_selected(self, item):
+    def emit_selected_item(self, item):
         """ Pass our item selection back up to the main window """
         self.emit('item-selected', item)
 
+    def emit_selected_category(self, category):
+        """ Pass category selection back up to the main window """
+        self.emit('category-selected', category)
+
     def feature_selected(self, fview, item):
         """ Item selected via feature view """
-        self.emit_selected(item)
+        self.emit_selected_item(item)
 
     def on_recent_clicked(self, btn, udata=None):
-        self.emit_selected(btn.item)
+        self.emit_selected_item(btn.item)
 
     def on_context_loaded(self, context):
         """ Fill the categories """
@@ -200,8 +187,13 @@ class ScHomeView(Gtk.Box):
     def add_category(self, plugin, category):
         """ Add a main category to our view """
         button = ScTileButton(category)
+        button.connect("clicked", self.on_category_clicked)
         button.show_all()
         self.categories.add(button)
+
+    def on_category_clicked(self, btn, udata=None):
+        """ One of our main categories has been clicked """
+        self.emit_selected_category(btn.category)
 
     def add_item(self, id, item, popfilter):
         if popfilter == PopulationFilter.RECENT:

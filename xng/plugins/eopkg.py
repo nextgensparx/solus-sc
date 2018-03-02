@@ -15,6 +15,7 @@ from .base import ProviderPlugin, ProviderItem, ProviderSource, \
     ProviderCategory
 from .base import PopulationFilter, ItemStatus
 from gi.repository import AppStreamGlib as As
+from gi.repository import Gtk
 import pisi
 from pisi.operations.install import plan_install_pkg_names
 import time
@@ -85,6 +86,58 @@ essential_packages = [
 ]
 
 
+# Utter laziness. :P
+ICON_MAPS = {
+    "desktop": "user-desktop",
+    "desktop.budgie": "start-here-solus",
+    "desktop.core": "system-run",
+    "desktop.font": "fonts",
+    "desktop.gnome": "desktop-environment-gnome",
+    "desktop.gnome.core": "system-devices-information",
+    "desktop.gnome.doc": "folder-documents",
+    "desktop.gtk": "gtk-dialog-info",
+    "desktop.kde": "desktop-environment-kde",
+    "desktop.library": "emblem-shared-symbolic",
+    "desktop.mate": "mate",
+    "desktop.multimedia": "multimedia-volume-control",
+    "desktop.qt": "qtconfig-qt4",
+    "desktop.theme": "preferences-desktop-wallpaper",
+    "editor": "x-office-document",
+    "games": "applications-games",
+    "games.action": "dota2",
+    "games.arcade": "gnome-nibbles",
+    "games.card": "gnome-aisleriot",
+    "games.emulator": "ds-emulator",
+    "games.puzzle": "gnome-tetravex",
+    "games.rpg": "wesnoth",
+    "games.strategy": "games-endturn",
+    "multimedia.sound": "multimedia-volume-control",
+    "multimedia.video": "camera-video",
+    "multimedia.audio": "library-music",
+    "multimedia.graphics": "camera-photo",
+    "network.download": "transmission",
+    "network.email": "internet-mail",
+    "network.im": "empathy",
+    "network.irc": "hexchat",
+    "network.news": "internet-news-reader",
+    "network.web": "emblem-web",
+    "network.web.browser": "web-browser",
+    "office": "x-office-spreadsheet",
+    "office.finance": "homebank",
+    "office.maths": "gnome-calculator",
+    "office.scientific": "applications-science",
+    "office.notes": "gnote",
+    "office.viewers": "calibre-viewer",
+    "programming.devel": "text-x-changelog",
+    "programming.haskell": "applications-haskell",
+    "programming.ide": "text-editor",
+    "programming.java": "applications-java",
+    "programming.python": "application-x-python-bytecode",
+    "programming.tools": "gitg",
+    "security": "preferences-system-firewall",
+}
+
+
 def is_essential_package(pkg):
     """ Essential packages should NEVER be removed by the user. """
     if pkg.partOf in essential_components:
@@ -129,6 +182,30 @@ class EopkgGroup(ProviderCategory):
         self.group = group
         self.children = []
 
+        # Just replace the icon on the fly with something that
+        # fits better into the current theme
+        settings = Gtk.Settings.get_default()
+        icon_theme = settings.get_property("gtk-icon-theme-name")
+        icon_theme = icon_theme.lower().replace("-", "")
+        # Sneaky, I know.
+        if icon_theme == "arcicons" or icon_theme == "arc":
+            devIcon = "text-x-changelog"
+        else:
+            devIcon = "gnome-dev-computer"
+
+        replacements = {
+            "text-editor": "x-office-calendar",
+            "redhat-programming": devIcon,
+            "security-high": "preferences-system-privacy",
+            "network": "preferences-system-network",
+        }
+
+        icon = str(self.group.icon)
+        if icon in replacements:
+            self.icon = replacements[icon]
+        else:
+            self.icon = icon
+
     def get_children(self):
         return self.children
 
@@ -140,7 +217,7 @@ class EopkgGroup(ProviderCategory):
 
     def get_icon_name(self):
         """ Return internal eopkg group icon name """
-        return str(self.group.icon)
+        return self.icon
 
 
 class EopkgComponent(ProviderCategory):
@@ -161,6 +238,8 @@ class EopkgComponent(ProviderCategory):
         return str(self.id)
 
     def get_icon_name(self):
+        if str(self.id) in ICON_MAPS:
+            return ICON_MAPS[str(self.id)]
         return "package-x-generic"
 
 
@@ -236,6 +315,8 @@ class EopkgPlugin(ProviderPlugin):
             return self.populate_new(storage, extra)
         elif popfilter == PopulationFilter.FEATURED:
             return self.populate_featured(storage, extra)
+        elif popfilter == PopulationFilter.CATEGORY:
+            return self.populate_category(storage, extra)
 
     def populate_recent(self, storage, appsystem):
         """ Populate home view with recently updated packages """
@@ -314,6 +395,13 @@ class EopkgPlugin(ProviderPlugin):
         for pkgID in self.installDB.list_installed():
             pkg = self.build_item(pkgID)
             storage.add_item(pkg.get_id(), pkg, PopulationFilter.INSTALLED)
+
+    def populate_category(self, storage, category):
+        """ Ask componentDB for all packages in the given component """
+        pkgs = self.compDB.get_packages(category.get_id(), None, False)
+        for pkgID in pkgs:
+            pkg = self.build_item(pkgID)
+            storage.add_item(pkg.get_id(), pkg, PopulationFilter.CATEGORY)
 
     def build_item(self, name):
         """ Build a complete item definition """

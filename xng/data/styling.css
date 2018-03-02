@@ -37,6 +37,10 @@
     font-size: 110%;
 }
 
+.sc-bold {
+    font-weight: bold;
+}
+
 .featured-box .big-thumb {
     font-size: 180%;
     padding: 4px;
@@ -81,4 +85,13 @@ list.sc-changelog .changelog-header {
 
 .group-button:hover {
     -gtk-icon-effect: none;
+}
+
+.solus-sc .category-item-row,
+.solus-sc .category-item-row:active {
+    border: 1px solid @borders;
+    background-color: lighter(@theme_bg_color);
+    color: @theme_fg_color;
+    padding: 5px;
+    border-radius: 2px;
 }

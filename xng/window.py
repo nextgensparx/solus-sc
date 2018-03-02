@@ -14,6 +14,7 @@
 from gi.repository import Gtk, GObject, GLib
 from .context import ScContext
 from .home import ScHomeView
+from .categories import ScCategoriesView
 from .details import ScDetailsView
 
 
@@ -90,6 +91,7 @@ class ScMainWindow(Gtk.ApplicationWindow):
     stack = None
     home = None
     details = None
+    categories = None
     nav_stack = ['home']
 
     resolutions = [
@@ -140,7 +142,13 @@ class ScMainWindow(Gtk.ApplicationWindow):
         # Build home view now
         self.home = ScHomeView(self.context)
         self.home.connect('item-selected', self.item_selected)
+        self.home.connect('category-selected', self.category_selected)
         self.stack.add_named(self.home, 'home')
+
+        # Categories view
+        self.categories = ScCategoriesView(self.context)
+        self.categories.connect('item-selected', self.item_selected)
+        self.stack.add_named(self.categories, 'categories')
 
         # Build Details view
         self.details = ScDetailsView(self.context)
@@ -234,6 +242,12 @@ class ScMainWindow(Gtk.ApplicationWindow):
         print("Item selected: {}".format(item.get_id()))
         self.details.set_item(item)
         self.push_nav("details")
+
+    def category_selected(self, source, category):
+        """ Handle UI selection of a root-level category """
+        print("Category selected: {}".format(category.get_id()))
+        self.categories.set_category(category)
+        self.push_nav("categories")
 
     def on_back_clicked(self, btn, udata=None):
         """ User clicked the back button """
